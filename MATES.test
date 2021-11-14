@@ -1,0 +1,70 @@
+.......k
+.....Qp.
+.......p
+......P.
+........
+........
+........
+........
+check flee1 reinforce pawn check
+check mate
+
+
+...r...k
+.......p
+........
+......RQ
+..R.....
+........
+........
+check q noblock noflee capture 1
+check r noblock noflee nocapture
+
+
+
+
+....r.k.
+.....p.p
+...p....
+......P.
+....q...
+.B...R..
+.Q....K.
+........
+check flee1
+check flee1
+check mate
+
+........
+......PP
+......K.
+......B.
+.....bp.
+.......q
+........
+....r...
+check q flee1
+check b mate
+ 
+
+.....b..
+.R...p.p
+......kP
+......P.
+......K.
+........
+........
+check block2
+check block1
+check mate
+
+
+........
+......pk
+.....pqp
+......PQ
+.....PK.
+.B......
+.B......
+.......R
+check flee1 x 5
