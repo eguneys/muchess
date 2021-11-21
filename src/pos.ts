@@ -41,13 +41,14 @@ type HasColor = {
   color: Color
 }
 
-type PickupAndDropBase = HasColor & HasRole & {
-  orig: Pos,
+type HasOrig = {
+  orig: Pos
 }
+
+type PickupAndDropBase = HasOrig & HasColor & HasRole & {}
 
 type Drop = PickupAndDropBase & {} 
 type Pickup = PickupAndDropBase & {} 
-
 
 
 type PickupDrop = {
@@ -179,7 +180,7 @@ function rays(vmove: VMove): Rays {
 
 export const vrays: SlidingMap<Rays> = objMap(vmoves, (key, vmove) => rays(vmove))
 
-export function drops_pickup(pickup: Pickup, drops: Drops): Drops {
+export function drops_pickup(orig: HasOrig, drops: Drops): Drops {
   return drops.filter(_ => !equal(_.orig, pickup.orig))
 }
 
@@ -263,10 +264,12 @@ export function pickup_drop(pickup: Pickup, drops:Drops): Array<PickupDrop> {
       let capture = drops_orig(_.target, drops)
 
 
+      
       let blocks = _.between.flatMap(_ => {
         let res = drops_orig(_, drops)
         return !!res ? [res] : []
       })
+
       return {
         pickup,
         drop,
@@ -307,13 +310,16 @@ export function backrank(pickup: Pickup, drops: Drops) {
 
   return pickup_drop(pickup, _drops)
     .filter(v =>
-      (!v.capture || be_opposite(v.pickup, v.capture) &&
+      (!v.capture || be_opposite(v.pickup, v.capture)) &&
         be_turn(v.pickup) &&
-        be_direct(v.blocks)))
-    .flatMap(_ =>
+        be_direct(v.blocks)
+    )
+    .flatMap(_ => 
       drop_intent(_.drop, _drops)
       .filter(v => 
-        v.capture && be_opposite(v.pickup, v.capture) && be_king(v.capture)))
+        be_direct(v.blocks) &&
+        v.capture && be_opposite(v.pickup, v.capture) && be_king(v.capture))
+    )
 }
 
 
