@@ -45,21 +45,33 @@ type HasOrig = {
   orig: Pos
 }
 
+
+type HasPickup = {
+  pickup: Pickup
+}
+
+type HasDrop = {
+  drop: Drop
+}
+
 type PickupAndDropBase = HasOrig & HasColor & HasRole & {}
 
 type Drop = PickupAndDropBase & {} 
 type Pickup = PickupAndDropBase & {} 
 
 
-type PickupDrop = {
-  pickup: Pickup,
-  drop: Drop,
+type PickupDrop = HasPickup & HasDrop & {
   capture?: Pickup,
-  blocks: Array<Drop>
+  blocks: Array<Drop>,
+  nonblocks: Array<Pos>
 }
 
-type Drops = Array<Drop>
+export type Drops = Array<Drop>
 
+
+type MateIn1Intent = [PickupDrop, PickupDrop]
+
+type BlockIntent = [PickupDrop, PickupDrop]
 
 const vrook: Array<VPos> = [
   [-1, 0],
@@ -180,17 +192,69 @@ function rays(vmove: VMove): Rays {
 
 export const vrays: SlidingMap<Rays> = objMap(vmoves, (key, vmove) => rays(vmove))
 
-export function drops_pickup(orig: HasOrig, drops: Drops): Drops {
-  return drops.filter(_ => !equal(_.orig, pickup.orig))
+export function drops_pickup(h: HasOrig, drops: Drops): Drops {
+  return drops.filter(_ => !equal(_.orig, h.orig))
 }
 
-function drops_drop(drop: Drop, drops: Drops): Drops {
+export function drops_drop(drop: Drop, drops: Drops): Drops {
   return [drop, ...drops]
 }
 
-function drops_orig(orig: Pos, drops: Drops): Drop | undefined {
+export function drops_orig(orig: Pos, drops: Drops): Drop | undefined {
   return drops.filter(_ => equal(_.orig, orig))[0]
 }
+
+export function drops_turn(drops: Drops): Drops {
+  return drops.map(_ => ({..._, color: opposite(_.color) }))
+}
+
+export function drops_apply_pickupanddrop(h: HasPickup & HasDrop, drops: Drops) {
+
+  let { pickup, drop } = h
+
+    let drops2 = drops_pickup(pickup, drops),
+      drops3 = drops_drop(drop, drops2),
+    drops4 = drops_turn(drops3)
+
+    return drops4
+}
+
+
+export function drops_apply_uci(uci: string, drops: Drops) {
+  let orig = uci_pos(uci.slice(0, 2)),
+    dest = uci_pos(uci.slice(2, 4))
+
+  if (orig && dest) {
+
+    let pickup = drops_orig(orig, drops)
+
+    if (!pickup) {
+      return undefined
+    }
+
+    let drop = {
+      orig: dest,
+      role: pickup.role,
+      color: pickup.color
+    }
+ 
+
+    return drops_apply_pickupanddrop({
+      pickup,
+      drop
+    }, drops)
+  } 
+}
+
+export function uci_pos(uci: string): Pos | undefined {
+  let f = files.indexOf(uci[0]) + 1,
+    r = ranks.indexOf(uci[1]) + 1
+
+  if (is_epos(f) && is_epos(r)) {
+    return [f, r]
+  }
+}
+
 
 export function fen_drops(fen: string): Drops {
 
@@ -270,11 +334,17 @@ export function pickup_drop(pickup: Pickup, drops:Drops): Array<PickupDrop> {
         return !!res ? [res] : []
       })
 
+      let nonblocks = _.between.flatMap(_ => {
+        let res = drops_orig(_, drops)
+        return !res ? [_] : []
+      })
+
       return {
         pickup,
         drop,
         capture,
-        blocks
+        blocks,
+        nonblocks
       }
     })
 }
@@ -295,6 +365,11 @@ function be_opposite(h: HasColor, h2: HasColor) {
   return h.color !== h2.color
 }
 
+
+function be_block(h: Array<Pos>, h2: HasOrig) {
+  return h.some(_ => equal(_, h2.orig))
+}
+
 function drop_intent(drop: Drop, drops: Drops): Array<PickupDrop> {
 
   let _drops = drops_drop(drop, drops)
@@ -304,7 +379,7 @@ function drop_intent(drop: Drop, drops: Drops): Array<PickupDrop> {
 }
 
 
-export function backrank(pickup: Pickup, drops: Drops) {
+export function backrank(pickup: Pickup, drops: Drops): Array<MateIn1Intent> {
 
   let _drops = drops_pickup(pickup, drops)
 
@@ -319,7 +394,27 @@ export function backrank(pickup: Pickup, drops: Drops) {
       .filter(v => 
         be_direct(v.blocks) &&
         v.capture && be_opposite(v.pickup, v.capture) && be_king(v.capture))
+      .map<MateIn1Intent>(_2 =>
+        [_, _2])
     )
+}
+
+
+export function block(pickup: Pickup,
+  pickdrop: PickupDrop,
+  drops: Drops): Array<BlockIntent> {
+
+    let _drops = drops_pickup(pickup, drops)
+
+    return pickup_drop(pickup, _drops)
+    .filter(v =>
+      (!v.capture || be_opposite(v.pickup, v.capture)) &&
+      be_turn(v.pickup) &&
+      be_direct(v.blocks) &&
+
+      be_block(pickdrop.nonblocks, v.drop)
+    ).map(_2 => [pickdrop, _2])
+
 }
 
 
@@ -334,7 +429,7 @@ function pos_uci(pos: Pos) {
   return files[pos[0] - 1] + ranks[pos[1] - 1]
 }
 
-export function pickupdrop_uci(pickupdrop: PickupDrop) {
+export function pickupdrop_pretty(pickupdrop: PickupDrop) {
 
   let { pickup, drop, capture } = pickupdrop
 
@@ -344,6 +439,16 @@ export function pickupdrop_uci(pickupdrop: PickupDrop) {
   
   return role_uci(color, role) + pos_uci(orig) + s_capture + pos_uci(dest)
 
+}
+
+export function pickupdrop_uci(pickupdrop: PickupDrop) {
+
+  let { pickup, drop, capture } = pickupdrop
+
+  let { orig, role, color } = pickup
+  let { orig: dest } = drop
+
+  return pos_uci(orig) + pos_uci(dest)
 }
 
 export function ray_uci(ray: Ray) {
