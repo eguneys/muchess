@@ -50,23 +50,40 @@ test.only('use moves', t => {
     }
 
     let drops = _drops
+    let idrops = _drops, bidrops = _drops
+
+    let attempts: Array<pos.PickupDrop> = []
 
     let res = pos.pickups(drops)
       .flatMap(_ => pos.backrank(_, drops))
       .flatMap(_intent => {
         let [attempt, intent] = _intent
-        let idrops = pos.drops_apply_pickupanddrop(attempt, drops)
+        idrops = pos.drops_apply_pickupanddrop(attempt, drops)
 
+        attempts.push(attempt)
         return pos.pickups(idrops)
           .flatMap(_ => pos.block(_, intent, idrops))
-      }).map(_intent =>
-        _intent.map(_ => pos.pickupdrop_uci(_)))
+      })
+      .flatMap(_intent => {
+        let [attempt, intentblock] = _intent
 
-    console.log(res)
+        attempts.push(attempt)
+        bidrops = pos.drops_apply_pickupanddrop(attempt, idrops)
+
+        return pos.pickups(bidrops)
+        .flatMap(_ => pos.open(_, intentblock, bidrops))
+      })
+      .map(_intent => {
+        attempts.push(_intent[0])
+      })
+
+    console.log(attempts.map(_ =>
+      pos.pickupdrop_uci(_)))
+
+
 
   }
 
 
   t.pass()
 })
-

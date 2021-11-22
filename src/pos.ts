@@ -60,7 +60,7 @@ type Drop = PickupAndDropBase & {}
 type Pickup = PickupAndDropBase & {} 
 
 
-type PickupDrop = HasPickup & HasDrop & {
+export type PickupDrop = HasPickup & HasDrop & {
   capture?: Pickup,
   blocks: Array<Drop>,
   nonblocks: Array<Pos>
@@ -72,6 +72,7 @@ export type Drops = Array<Drop>
 type MateIn1Intent = [PickupDrop, PickupDrop]
 
 type BlockIntent = [PickupDrop, PickupDrop]
+type OpenIntent = [PickupDrop, PickupDrop]
 
 const vrook: Array<VPos> = [
   [-1, 0],
@@ -349,6 +350,10 @@ export function pickup_drop(pickup: Pickup, drops:Drops): Array<PickupDrop> {
     })
 }
 
+function be_open(h: HasOrig, h2: HasOrig) {
+  return equal(h.orig, h2.orig)
+}
+
 function be_turn(h: HasColor) {
   return h.color === 'w'
 }
@@ -413,9 +418,28 @@ export function block(pickup: Pickup,
       be_direct(v.blocks) &&
 
       be_block(pickdrop.nonblocks, v.drop)
-    ).map(_2 => [pickdrop, _2])
+    ).map(_2 => [_2, pickdrop])
 
 }
+
+
+export function open(pickup: Pickup,
+  intentblock: PickupDrop,
+  drops: Drops): Array<OpenIntent> {
+    let _drops = drops_pickup(pickup, drops)
+  return pickup_drop(pickup, _drops)
+    .filter(v =>
+      (!v.capture || be_opposite(v.pickup, v.capture)) &&
+      be_turn(v.pickup) &&
+      be_direct(v.blocks)
+    ).flatMap(_ =>
+      drop_intent(_.drop, _drops)
+      .filter(v =>
+        be_direct(v.blocks) &&
+        be_open(v.drop, intentblock.drop))
+      .map<OpenIntent>(_2 => [_, _2])
+    )
+  }
 
 
 export function pickups(drops: Drops) {
