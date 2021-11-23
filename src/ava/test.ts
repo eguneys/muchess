@@ -160,21 +160,26 @@ test('puzzle 60', t => {
   t.pass()
 })  
 test.only('puzzle 80', t => {
-  solve(puzzle80)
+  solve2(puzzle80)
   t.pass()
 })  
 
+test('intent flee choose capture', t => {
+  solve2(puzzle80, '01MQ3')
+  t.pass()
+})
 
-function solve2(puzzle20: string) {
-  let pzs = puzzle20.trim().split('\n').map(_ => _.split(',').slice(1, 3))
+function solve2(puzzle20: string, filterid?: string) {
+  let pzs = puzzle20.trim().split('\n').map(_ => _.split(',').slice(0, 3))
 
-  let correct: any = [],
+  let crash: any = [],
+    correct: any = [],
     extra: any = [],
     none: any = [],
     miss: any = []
 
   pzs.filter(pz => {
-    let [fen, _moves] = pz
+    let [id, fen, _moves] = pz
 
     let moves = _moves.split(' ').reverse()
     let drops = pos.fen_drops(fen)
@@ -182,14 +187,54 @@ function solve2(puzzle20: string) {
  
     let question_uci = moves.pop()
     let answer_uci = moves.pop()!
-      let info = [fen, _moves].join(',')
-    if (answer_uci !== 'b7c7')return false
+      let info = [id, fen, _moves].join(',')
+
+    if (filterid && id !== filterid)return false
 
     if (question_uci) {
 
-      let pd = pos.uci_pickupdrop(question_uci, drops)!
+      let pd = pos.uci_pickupdrop(question_uci, drops)
 
-      let _res: any = [] //
+      if (!pd) {
+        crash.push(`fail pickupdrop question ${info}`)
+        return false
+      }
+
+      let _drops = pos.drops_apply_pickupdrop(pd, drops)
+
+      let _res: Array<pos.PickupDrop> = []
+
+
+
+
+      if (_res.length === 0) {
+        _res = pos.intent_capture(pd, drops)
+          .flatMap(intent => {
+            let pickup = pos.intent_flee(intent, _drops)
+
+            if (pickup) {
+              let __res: Array<pos.PickupDrop> = []
+
+              if (_res.length === 0) {
+                __res = pos.fork(_drops, pickup) 
+                  .filter(_ =>
+                    pos.c_capture(_, _drops).length === 0
+                  )
+              }
+
+
+              if (__res.length == 0) {
+
+              }
+
+              return __res
+            }
+            return []
+          })
+      }
+
+
+
       let res = _res.map(pos.pickupdrop_uci)
 
 
@@ -211,6 +256,7 @@ function solve2(puzzle20: string) {
   console.log('Extra ', extra.length/2, extra.slice(0, 2))
   console.log('None ', none.length, none.slice(0, 4))
   console.log('Miss ', miss.length/2, miss.slice(0, 4))
+  console.log('Crash ', crash.length, crash.slice(0, 4))
 }
 
 

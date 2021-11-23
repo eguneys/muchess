@@ -72,6 +72,7 @@ export type PickupDrop = HasPickup & HasDrop & {
 
 export type Drops = Array<Drop>
 
+// {{{ rays
 const vrook: Array<VPos> = [
   [-1, 0],
   [1, 0],
@@ -190,6 +191,8 @@ function rays(vmove: VMove): Rays {
 }
 
 export const vrays: SlidingMap<Rays> = objMap(vmoves, (key, vmove) => rays(vmove))
+// }}}
+
 
 export function drops_pickup(h: HasOrig, drops: Drops): Drops {
   return drops.filter(_ => !equal(_.orig, h.orig))
@@ -253,58 +256,6 @@ export function uci_pos(uci: string): Pos | undefined {
   if (is_epos(f) && is_epos(r)) {
     return [f, r]
   }
-}
-
-
-export function fen_drops(fen: string): Drops {
-
-  let [poss, _scolor] = fen.split(' ')
-
-  let scolor = worb(_scolor === 'w')
-
-  let res = []
-  let orig: Pos | undefined = [1, 8]
-  let vright: VPos = [1, 0],
-    vdown: VPos = [0, -1]
-
-  for (let i = 0; i < poss.length; i++) {
-    let _char = poss[i]
-
-    if (_char === '/') {
-      orig = orig && apply_vpos(orig, vdown)
-      if (orig) orig[0] = 1
-      continue
-    }
-
-    let idist = _char.charCodeAt(0) - '0'.charCodeAt(0)
-
-    if (1 <= idist && idist <= 8) {
-      for (let k = 0; k < idist; k++) {
-        let _orig = orig && apply_vpos(orig, vright)
-        if (_orig) orig = _orig
-      }
-      continue
-    }
-
-    let role = _char.toLowerCase(),
-      color = worb(role !== _char, scolor)
-
-    if (orig && is_role(role)) {
-      
-
-      res.push({
-        orig,
-        role,
-        color
-      })
-
-      let _orig = orig && apply_vpos(orig, vright)
-      if (_orig) orig = _orig
-    }
-
-  }
-
-  return res
 }
 
 
@@ -459,9 +410,10 @@ export function capture(drops: Drops) {
       })
 }
 
-export function fork(drops: Drops) {
+export function fork(drops: Drops, _pickup?: Pickup) {
   return drops.filter(_ =>
-    be_turn(_))
+    be_turn(_) &&
+    (!_pickup || be_orig(_pickup, _)))
   .flatMap(pickup => {
     let _drops = drops_pickup(pickup, drops)
     return pickup_drop(pickup, _drops)
@@ -522,6 +474,82 @@ export function qxr(drops: Drops) {
   })
 }
 
+
+export function intent_flee(xpd: PickupDrop, drops: Drops) {
+  return xpd.capture && drops_orig(xpd.capture.orig, drops)
+}
+
+export function intent_capture(pd: PickupDrop, drops: Drops) {
+
+  let _drops = drops_apply_pickupdrop(pd, drops)
+  let pickup = drops_orig(pd.drop.orig, _drops)!
+  _drops = drops_pickup(pickup, _drops)
+  return pickup_drop(pickup, _drops)
+    .filter(v =>
+      be_turn(v.pickup) &&
+      be_direct(v.blocks) &&
+
+      (v.capture && console.log(v.capture, v.pickup) as any) || 
+      v.capture && be_opposite(v.capture, v.pickup) && be_piece(v.capture)
+    )
+}
+
+
+// {{{ fen uci
+
+export function fen_drops(fen: string): Drops {
+
+let [poss, _scolor] = fen.split(' ')
+
+let scolor = worb(_scolor === 'w')
+
+let res = []
+let orig: Pos | undefined = [1, 8]
+let vright: VPos = [1, 0],
+  vdown: VPos = [0, -1]
+
+for (let i = 0; i < poss.length; i++) {
+  let _char = poss[i]
+
+  if (_char === '/') {
+    orig = orig && apply_vpos(orig, vdown)
+    if (orig) orig[0] = 1
+    continue
+  }
+
+  let idist = _char.charCodeAt(0) - '0'.charCodeAt(0)
+
+  if (1 <= idist && idist <= 8) {
+    for (let k = 0; k < idist; k++) {
+      let _orig = orig && apply_vpos(orig, vright)
+      if (_orig) orig = _orig
+    }
+    continue
+  }
+
+  let role = _char.toLowerCase(),
+    color = worb(role !== _char, scolor)
+
+  if (orig && is_role(role)) {
+    
+
+    res.push({
+      orig,
+      role,
+      color
+    })
+
+    let _orig = orig && apply_vpos(orig, vright)
+    if (_orig) orig = _orig
+  }
+
+}
+
+return res
+}
+
+
+
 const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 const ranks = ['1', '2', '3', '4', '5', '6', '7', '8']
 
@@ -571,5 +599,4 @@ function objMap(objs: any, fn: (key: any, value: any) => any): any {
   }
   return res
 }
-
 
