@@ -198,7 +198,6 @@ function rays(vmove: VMove): Rays {
 export const vrays: SlidingMap<Rays> = objMap(vmoves, (key, vmove) => rays(vmove))
 // }}}
 
-
 export function drops_pickup(h: HasOrig, drops: Drops): Drops {
   return drops.filter(_ => !equal(_.orig, h.orig))
 }
@@ -218,12 +217,22 @@ export function drops_turn(drops: Drops): Drops {
 export function drops_apply_pickupdrop(h: PickupDropCaptureBase, drops: Drops) {
 
   let { pickup, drop, capture } = h
-  let drops2 = capture ? drops_pickup(capture, drops) : drops,
-    drops3 = drops_pickup(pickup, drops2),
-      drops4 = drops_drop(drop, drops3),
+  let drops2 = drops_pickup(pickup, drops),
+    drops3 = capture ? drops_pickup(capture, drops2) : drops2,
+    drops4 = drops_drop(drop, drops3),
     drops5 = drops_turn(drops4)
 
     return drops5
+}
+
+
+export function uci_pos(uci: string): Pos | undefined {
+  let f = files.indexOf(uci[0]) + 1,
+    r = ranks.indexOf(uci[1]) + 1
+
+  if (is_epos(f) && is_epos(r)) {
+    return [f, r]
+  }
 }
 
 
@@ -240,6 +249,7 @@ export function uci_pickupdrop(uci: string, drops: Drops): PickupDrop | undefine
       return undefined
     }
 
+    // TODO apply pickup
     return pickup_drop(pickup, drops)
       .find(_ => equal(_.drop.orig, dest))
   } 
@@ -252,16 +262,6 @@ export function drops_apply_uci(uci: string, drops: Drops) {
     return drops_apply_pickupdrop(pd, drops)
   }
 }
-
-export function uci_pos(uci: string): Pos | undefined {
-  let f = files.indexOf(uci[0]) + 1,
-    r = ranks.indexOf(uci[1]) + 1
-
-  if (is_epos(f) && is_epos(r)) {
-    return [f, r]
-  }
-}
-
 
 export function pickup_drop(pickup: Pickup, drops:Drops): Array<PickupDrop> {
   let {orig, color, role, turn} = pickup
@@ -368,12 +368,27 @@ function be_block(h: Array<Pos>, h2: HasOrig) {
   return h.some(_ => equal(_, h2.orig))
 }
 
+export function c_kingflee(pd: PickupDrop, drops: Drops) {
+  let _drops = drops_apply_pickupdrop(pd, drops)
+  return _drops.filter(_ =>
+    be_turn(_) && be_king(_))
+  .flatMap(pickup => {
+    return pickup_drop(pickup, _drops)
+      .filter(v =>
+        be_turn(v.pickup) &&
+        be_direct(v.blocks) &&
+        (!v.capture || be_opposite(v.capture, v.pickup)) &&
+        c_capture(v, _drops).length === 0
+      )
+  })
+}
+
+
 export function c_capture(pd: PickupDrop, drops: Drops) {
   let _drops = drops_apply_pickupdrop(pd, drops)
   return _drops.filter(_ =>
     be_turn(_))
   .flatMap(pickup => {
-    let __drops = drops_pickup(pickup, _drops)
     return pickup_drop(pickup, _drops)
       .filter(v =>
         be_turn(v.pickup) &&
@@ -383,61 +398,21 @@ export function c_capture(pd: PickupDrop, drops: Drops) {
   })
 }
 
-export function exchange(drops: Drops) {
-  return drops.filter(_ =>
-    be_turn(_))
-      .flatMap(pickup => {
-        let _drops = drops_pickup(pickup, drops)
-        return pickup_drop(pickup, _drops)
-          .filter(v =>
-            be_turn(v.pickup) &&
-            be_direct(v.blocks) &&
-
-            v.capture && be_opposite(v.capture, v.pickup)
-            && be_piece(v.capture)
-          )
-      })
-}
-
-export function capture(drops: Drops) {
-  return drops.filter(_ =>
-    be_turn(_))
-      .flatMap(pickup => {
-        let _drops = drops_pickup(pickup, drops)
-        return pickup_drop(pickup, _drops)
-          .filter(v =>
-            be_turn(v.pickup) &&
-            be_direct(v.blocks) &&
-
-            v.capture && be_opposite(v.capture, v.pickup)
-            && be_piece(v.capture)
-          )
-      })
-}
-
 export function fork(drops: Drops, _pickup?: Pickup) {
   return drops.filter(_ =>
     be_turn(_) &&
     (!_pickup || be_orig(_pickup, _)))
   .flatMap(pickup => {
-    let _drops = drops_pickup(pickup, drops)
-    return pickup_drop(pickup, _drops)
-    .filter(v =>
-       be_turn(v.pickup) &&
-      be_direct(v.blocks) &&
-      (!v.capture || be_opposite(v.capture, v.pickup))
-    ).filter(v => {
-      let __drops = drops_drop(v.drop, _drops)
-      let pds = pickup_drop(v.drop, __drops)
-
-      return pds.some(v =>
-        be_direct(v.blocks) &&
-        v.capture && be_king(v.capture) && !be_turn(v.capture)
-      ) && pds.some(v =>
-        be_direct(v.blocks) &&
-        v.capture && be_piece(v.capture) && !be_turn(v.capture)
-      )
-    })
+    return pickup_drop(pickup, drops)
+    .filter(v => 
+      be_direct(v.blocks) && 
+      intent_capture(v, drops).filter(_ =>
+        _.capture && be_king(_.capture)
+      ).length > 0 &&
+      intent_capture(v, drops).filter(_ =>
+        _.capture && be_piece(_.capture)
+      ).length > 0
+    )
   })
 }
 
@@ -446,22 +421,21 @@ export function backrank(drops: Drops) {
   return drops.filter(_ =>
     be_turn(_))
   .flatMap(pickup => {
-    let _drops = drops_pickup(pickup, drops)
-    return pickup_drop(pickup, _drops)
+    return pickup_drop(pickup, drops)
     .filter(v =>
-       be_turn(v.pickup) &&
+      be_turn(v.pickup) &&
       be_direct(v.blocks) &&
       be_backrank(v.drop)
-    ).filter(v => {
-      let __drops = drops_drop(v.drop, _drops)
-      return pickup_drop(v.drop, __drops)
-      .some(v =>
-        be_direct(v.blocks) &&
-        v.capture && be_king(v.capture) && !be_turn(v.capture)
-      )
-    })
+    ).filter(v => 
+      intent_capture(v, drops).filter(_ => 
+        _.capture && be_king(_.capture)
+      ).length > 0
+    ).filter(v =>
+      c_kingflee(v, drops).length === 0
+    )
   })
 }
+
 
 export function qxr(drops: Drops) {
   return drops.filter(_ =>
@@ -489,12 +463,11 @@ export function intent_capture(pd: PickupDrop, drops: Drops) {
 
   let _drops = drops_apply_pickupdrop(pd, drops)
   let pickup = drops_orig(pd.drop.orig, _drops)!
-  _drops = drops_pickup(pickup, _drops)
   return pickup_drop(pickup, _drops)
     .filter(v =>
-      be_turn(v.pickup) &&
+      !be_turn(v.pickup) &&
       be_direct(v.blocks) &&
-      v.capture && be_opposite(v.capture, v.pickup) && be_piece(v.capture)
+      v.capture && be_opposite(v.capture, v.pickup)
     )
 }
 
@@ -569,9 +542,10 @@ export function pickupdrop_pretty(pickupdrop: PickupDrop) {
 
   let { orig, role, color } = pickup
   let { orig: dest } = drop
-  let s_capture = !!capture?'x':''
+  let s_capture = !!capture?'x':'',
+    s_capturer = !!capture?role_uci(capture.color, capture.role):''
   
-  return role_uci(color, role) + pos_uci(orig) + s_capture + pos_uci(dest)
+  return role_uci(color, role) + pos_uci(orig) + s_capture + pos_uci(dest) + s_capturer
 
 }
 

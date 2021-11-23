@@ -1,27 +1,6 @@
 import test from 'ava';
 
 import * as pos from '../pos'
-
-test('hanging piece', t => {
-
-  let _case = '00kRi,2r1kb1r/p1q2ppp/2p1p3/3pPbP1/Q2P3P/2R2P2/PP1N4/R1B1K3 w Qk - 3 20,c3c6 c7c6 a4c6 c8c6,626,106,86,283,crushing middlegame short,https://lichess.org/KE2mWPfP#39'
-
-  let [fen, _moves] = _case.split(',').slice(1, 3)
-
-  let moves = _moves.split(' ').reverse()
-  let drops = pos.fen_drops(fen)
-
-
-  let quci = moves.pop()!
-
-  let _drops = pos.drops_apply_uci(quci, drops)!
-
-  pos.qxr(_drops)
-  
-  t.pass()
-})
-
-
 const puzzle80 = `
 01J5O,r4r1k/1pp1NppR/3p4/p3n3/4P3/1PPP2P1/1P1K2P1/3R4 b - - 0 22,h8h7 d1h1,921,114,100,26,anastasiaMate endgame mate mateIn1 oneMove,https://lichess.org/2DUSUcNf/black#44
 01gQ1,2kr1b1r/pbp5/1pn1q1pp/3p1p2/3P4/P1P1BQ1B/1P3P1P/R3K1R1 b Q - 1 18,g6g5 h3f5 e6f5 f3f5,925,82,88,85,advantage middlegame pin short,https://lichess.org/4gkLoCF2/black#36
@@ -215,7 +194,11 @@ function solve2(puzzle20: string, filterid?: string) {
               if (__res.length === 0) {
                 __res = pos.fork(_drops, pickup) 
                   .filter(_ =>
-                    pos.c_capture(_, _drops).length === 0
+                    pos.c_capture(_, _drops)
+                    .filter(__ => {
+                      let __drops = pos.drops_apply_pickupdrop(_, _drops)
+                      return pos.c_capture(__, __drops).length > 0
+                    }).length > 0
                   )
               }
             }
@@ -232,20 +215,7 @@ function solve2(puzzle20: string, filterid?: string) {
       }
 
       if (_res.length === 0) {
-
         _res = pos.backrank(_drops)
-          .filter(_ => 
-            pos.c_capture(_, _drops)
-            .filter(_capture => {
-              let ___drops =
-                pos.drops_apply_pickupdrop(_capture,
-                  pos.drops_apply_pickupdrop(_, _drops))
-
-              return pos.backrank(___drops)
-                .length === 0
-
-            })
-            .length === 0)
       }
 
 
@@ -322,9 +292,6 @@ function solve(puzzle20: string) {
           pos.c_capture(_, _drops).length === 0)
       }
       if (_res.length === 0) {
-        _res = pos.capture(_drops)
-      }
-      if (_res.length === 0) {
         _res = pos.qxr(_drops)
       }
       let res = _res.map(pos.pickupdrop_uci)
@@ -349,5 +316,4 @@ function solve(puzzle20: string) {
   console.log('None ', none.length, none.slice(0, 4))
   console.log('Miss ', miss.length/2, miss.slice(0, 4))
 }
-
 
