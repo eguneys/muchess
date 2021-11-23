@@ -138,6 +138,10 @@ const puzzle40 = `
 `
 
 
+test('intent flee choose capture', t => {
+  solve2(puzzle80, '01MQ3')
+  t.pass()
+})
 
 test('puzzle 0', t => {
   solve(puzzle0)
@@ -159,15 +163,12 @@ test('puzzle 60', t => {
   solve(puzzle60)
   t.pass()
 })  
+
+
 test.only('puzzle 80', t => {
   solve2(puzzle80)
   t.pass()
 })  
-
-test('intent flee choose capture', t => {
-  solve2(puzzle80, '01MQ3')
-  t.pass()
-})
 
 function solve2(puzzle20: string, filterid?: string) {
   let pzs = puzzle20.trim().split('\n').map(_ => _.split(',').slice(0, 3))
@@ -184,7 +185,7 @@ function solve2(puzzle20: string, filterid?: string) {
     let moves = _moves.split(' ').reverse()
     let drops = pos.fen_drops(fen)
 
- 
+
     let question_uci = moves.pop()
     let answer_uci = moves.pop()!
       let info = [id, fen, _moves].join(',')
@@ -204,35 +205,48 @@ function solve2(puzzle20: string, filterid?: string) {
 
       let _res: Array<pos.PickupDrop> = []
 
-
-
-
       if (_res.length === 0) {
         _res = pos.intent_capture(pd, drops)
           .flatMap(intent => {
             let pickup = pos.intent_flee(intent, _drops)
 
+            let __res: Array<pos.PickupDrop> = []
             if (pickup) {
-              let __res: Array<pos.PickupDrop> = []
-
-              if (_res.length === 0) {
+              if (__res.length === 0) {
                 __res = pos.fork(_drops, pickup) 
                   .filter(_ =>
                     pos.c_capture(_, _drops).length === 0
                   )
               }
-
-
-              if (__res.length == 0) {
-
-              }
-
-              return __res
             }
-            return []
+            return __res
           })
       }
 
+
+      if (_res.length === 0) {
+        _res = pos.fork(_drops)
+          .filter(_ =>
+            pos.c_capture(_, _drops).length === 0
+          )
+      }
+
+      if (_res.length === 0) {
+
+        _res = pos.backrank(_drops)
+          .filter(_ => 
+            pos.c_capture(_, _drops)
+            .filter(_capture => {
+              let ___drops =
+                pos.drops_apply_pickupdrop(_capture,
+                  pos.drops_apply_pickupdrop(_, _drops))
+
+              return pos.backrank(___drops)
+                .length === 0
+
+            })
+            .length === 0)
+      }
 
 
       let res = _res.map(pos.pickupdrop_uci)
@@ -247,16 +261,16 @@ function solve2(puzzle20: string, filterid?: string) {
       }else {
         miss.push(info, res)
       }
-    }
 
-    return true
+      return true
+    }
   })
 
-  console.log('Correct ', correct.length)
+  console.log('Crash ', crash.length, crash.slice(0, 4))
   console.log('Extra ', extra.length/2, extra.slice(0, 2))
   console.log('None ', none.length, none.slice(0, 4))
   console.log('Miss ', miss.length/2, miss.slice(0, 4))
-  console.log('Crash ', crash.length, crash.slice(0, 4))
+  console.log('Correct ', correct.length)
 }
 
 

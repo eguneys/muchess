@@ -23,6 +23,7 @@ type Sliding = 'r' | 'k' | 'q' | 'n' | 'b'
 type Pawn = 'p'
 type Role = Sliding | Pawn
 type Color = 'w' | 'b'
+type Turn = boolean
 
 type RoleMap<A> = {
   [key in Role]: A
@@ -41,6 +42,10 @@ type HasColor = {
   color: Color
 }
 
+type HasTurn = {
+  turn: Turn
+}
+
 type HasOrig = {
   orig: Pos
 }
@@ -54,7 +59,7 @@ type HasDrop = {
   drop: Drop
 }
 
-type PickupAndDropBase = HasOrig & HasColor & HasRole & {}
+type PickupAndDropBase = HasOrig & HasColor & HasRole & HasTurn & {}
 
 type Drop = PickupAndDropBase & {} 
 type Pickup = PickupAndDropBase & {} 
@@ -207,7 +212,7 @@ export function drops_orig(orig: Pos, drops: Drops): Drop | undefined {
 }
 
 export function drops_turn(drops: Drops): Drops {
-  return drops.map(_ => ({..._, color: opposite(_.color) }))
+  return drops.map(_ => ({..._, turn: !_.turn }))
 }
 
 export function drops_apply_pickupdrop(h: PickupDropCaptureBase, drops: Drops) {
@@ -224,12 +229,11 @@ export function drops_apply_pickupdrop(h: PickupDropCaptureBase, drops: Drops) {
 
 export function uci_pickupdrop(uci: string, drops: Drops): PickupDrop | undefined {
 
-  let orig = uci_pos(uci.slice(0, 2)),
+  const orig = uci_pos(uci.slice(0, 2)),
     dest = uci_pos(uci.slice(2, 4))
 
   if (orig && dest) {
 
-    let _dest = dest
     let pickup = drops_orig(orig, drops)
 
     if (!pickup) {
@@ -237,7 +241,7 @@ export function uci_pickupdrop(uci: string, drops: Drops): PickupDrop | undefine
     }
 
     return pickup_drop(pickup, drops)
-      .find(_ => equal(_.drop.orig, _dest))
+      .find(_ => equal(_.drop.orig, dest))
   } 
 }
 
@@ -260,7 +264,7 @@ export function uci_pos(uci: string): Pos | undefined {
 
 
 export function pickup_drop(pickup: Pickup, drops:Drops): Array<PickupDrop> {
-  let {orig, color, role} = pickup
+  let {orig, color, role, turn} = pickup
 
   if (!is_sliding(role)) {
     return []
@@ -273,6 +277,7 @@ export function pickup_drop(pickup: Pickup, drops:Drops): Array<PickupDrop> {
       let drop = {
         orig: _.target,
         color,
+        turn,
         role
       }
 
@@ -308,8 +313,8 @@ function be_backrank(h: HasOrig) {
   return h.orig[1] === 1 || h.orig[1] === 8
 }
 
-function be_turn(h: HasColor) {
-  return h.color === 'w'
+function be_turn(h: HasTurn) {
+  return h.turn
 }
 
 function be_direct(blocks: Array<Drop>) {
@@ -437,6 +442,7 @@ export function fork(drops: Drops, _pickup?: Pickup) {
 }
 
 export function backrank(drops: Drops) {
+
   return drops.filter(_ =>
     be_turn(_))
   .flatMap(pickup => {
@@ -488,8 +494,6 @@ export function intent_capture(pd: PickupDrop, drops: Drops) {
     .filter(v =>
       be_turn(v.pickup) &&
       be_direct(v.blocks) &&
-
-      (v.capture && console.log(v.capture, v.pickup) as any) || 
       v.capture && be_opposite(v.capture, v.pickup) && be_piece(v.capture)
     )
 }
@@ -499,53 +503,55 @@ export function intent_capture(pd: PickupDrop, drops: Drops) {
 
 export function fen_drops(fen: string): Drops {
 
-let [poss, _scolor] = fen.split(' ')
+  let [poss, _scolor] = fen.split(' ')
 
-let scolor = worb(_scolor === 'w')
+  let scolor = worb(_scolor === 'w')
 
-let res = []
-let orig: Pos | undefined = [1, 8]
-let vright: VPos = [1, 0],
-  vdown: VPos = [0, -1]
+  let res = []
+  let orig: Pos | undefined = [1, 8]
+  let vright: VPos = [1, 0],
+    vdown: VPos = [0, -1]
 
-for (let i = 0; i < poss.length; i++) {
-  let _char = poss[i]
+  for (let i = 0; i < poss.length; i++) {
+    let _char = poss[i]
 
-  if (_char === '/') {
-    orig = orig && apply_vpos(orig, vdown)
-    if (orig) orig[0] = 1
-    continue
-  }
+    if (_char === '/') {
+      orig = orig && apply_vpos(orig, vdown)
+      if (orig) orig[0] = 1
+      continue
+    }
 
-  let idist = _char.charCodeAt(0) - '0'.charCodeAt(0)
+    let idist = _char.charCodeAt(0) - '0'.charCodeAt(0)
 
-  if (1 <= idist && idist <= 8) {
-    for (let k = 0; k < idist; k++) {
+    if (1 <= idist && idist <= 8) {
+      for (let k = 0; k < idist; k++) {
+        let _orig = orig && apply_vpos(orig, vright)
+        if (_orig) orig = _orig
+      }
+      continue
+    }
+
+    let role = _char.toLowerCase(),
+      color = worb(role !== _char),
+      turn = color === scolor
+
+    if (orig && is_role(role)) {
+
+
+      res.push({
+        orig,
+        role,
+        color,
+        turn
+      })
+
       let _orig = orig && apply_vpos(orig, vright)
       if (_orig) orig = _orig
     }
-    continue
+
   }
 
-  let role = _char.toLowerCase(),
-    color = worb(role !== _char, scolor)
-
-  if (orig && is_role(role)) {
-    
-
-    res.push({
-      orig,
-      role,
-      color
-    })
-
-    let _orig = orig && apply_vpos(orig, vright)
-    if (_orig) orig = _orig
-  }
-
-}
-
-return res
+  return res
 }
 
 
