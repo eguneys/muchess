@@ -207,7 +207,7 @@ export function drops_turn(drops: Drops): Drops {
   return drops.map(_ => ({..._, color: opposite(_.color) }))
 }
 
-export function drops_apply_pickupanddrop(h: PickupDropCaptureBase, drops: Drops) {
+export function drops_apply_pickupdrop(h: PickupDropCaptureBase, drops: Drops) {
 
   let { pickup, drop, capture } = h
   let drops2 = capture ? drops_pickup(capture, drops) : drops,
@@ -219,32 +219,31 @@ export function drops_apply_pickupanddrop(h: PickupDropCaptureBase, drops: Drops
 }
 
 
-export function drops_apply_uci(uci: string, drops: Drops) {
+export function uci_pickupdrop(uci: string, drops: Drops): PickupDrop | undefined {
+
   let orig = uci_pos(uci.slice(0, 2)),
     dest = uci_pos(uci.slice(2, 4))
 
   if (orig && dest) {
 
+    let _dest = dest
     let pickup = drops_orig(orig, drops)
 
     if (!pickup) {
       return undefined
     }
 
-    let drop = {
-      orig: dest,
-      role: pickup.role,
-      color: pickup.color
-    }
- 
-    let capture = drops_orig(drop.orig, drops)
-
-    return drops_apply_pickupanddrop({
-      pickup,
-      drop,
-      capture
-    }, drops)
+    return pickup_drop(pickup, drops)
+      .find(_ => equal(_.drop.orig, _dest))
   } 
+}
+
+
+export function drops_apply_uci(uci: string, drops: Drops) {
+  let pd = uci_pickupdrop(uci, drops)
+  if (pd) {
+    return drops_apply_pickupdrop(pd, drops)
+  }
 }
 
 export function uci_pos(uci: string): Pos | undefined {
@@ -350,7 +349,7 @@ export function pickup_drop(pickup: Pickup, drops:Drops): Array<PickupDrop> {
     })
 }
 
-function be_open(h: HasOrig, h2: HasOrig) {
+function be_orig(h: HasOrig, h2: HasOrig) {
   return equal(h.orig, h2.orig)
 }
 
@@ -374,12 +373,33 @@ function be_pawn(h: HasRole) {
   return h.role === 'p'
 }
 
+function be_knight(h: HasRole) {
+  return h.role === 'n'
+}
+
+function be_bishop(h: HasRole) {
+  return h.role === 'b'
+}
+
+
 function be_queen(h: HasRole) {
   return h.role === 'q'
 }
 
 function be_rook(h: HasRole) {
   return h.role === 'r'
+}
+
+function be_major(h: HasRole) {
+  return be_queen(h) || be_rook(h)
+}
+
+function be_minor(h: HasRole) {
+  return be_knight(h) || be_bishop(h)
+}
+
+function be_piece(h: HasRole) {
+  return be_major(h) || be_minor(h)
 }
 
 
@@ -392,6 +412,77 @@ function be_block(h: Array<Pos>, h2: HasOrig) {
   return h.some(_ => equal(_, h2.orig))
 }
 
+export function c_capture(pd: PickupDrop, drops: Drops) {
+  let _drops = drops_apply_pickupdrop(pd, drops)
+  return _drops.filter(_ =>
+    be_turn(_))
+  .flatMap(pickup => {
+    let __drops = drops_pickup(pickup, _drops)
+    return pickup_drop(pickup, _drops)
+      .filter(v =>
+        be_turn(v.pickup) &&
+        be_direct(v.blocks) &&
+        v.capture && be_opposite(v.capture, v.pickup) &&
+        be_orig(pd.drop, v.capture))
+  })
+}
+
+export function exchange(drops: Drops) {
+  return drops.filter(_ =>
+    be_turn(_))
+      .flatMap(pickup => {
+        let _drops = drops_pickup(pickup, drops)
+        return pickup_drop(pickup, _drops)
+          .filter(v =>
+            be_turn(v.pickup) &&
+            be_direct(v.blocks) &&
+
+            v.capture && be_opposite(v.capture, v.pickup)
+            && be_piece(v.capture)
+          )
+      })
+}
+
+export function capture(drops: Drops) {
+  return drops.filter(_ =>
+    be_turn(_))
+      .flatMap(pickup => {
+        let _drops = drops_pickup(pickup, drops)
+        return pickup_drop(pickup, _drops)
+          .filter(v =>
+            be_turn(v.pickup) &&
+            be_direct(v.blocks) &&
+
+            v.capture && be_opposite(v.capture, v.pickup)
+            && be_piece(v.capture)
+          )
+      })
+}
+
+export function fork(drops: Drops) {
+  return drops.filter(_ =>
+    be_turn(_))
+  .flatMap(pickup => {
+    let _drops = drops_pickup(pickup, drops)
+    return pickup_drop(pickup, _drops)
+    .filter(v =>
+       be_turn(v.pickup) &&
+      be_direct(v.blocks) &&
+      (!v.capture || be_opposite(v.capture, v.pickup))
+    ).filter(v => {
+      let __drops = drops_drop(v.drop, _drops)
+      let pds = pickup_drop(v.drop, __drops)
+
+      return pds.some(v =>
+        be_direct(v.blocks) &&
+        v.capture && be_king(v.capture) && !be_turn(v.capture)
+      ) && pds.some(v =>
+        be_direct(v.blocks) &&
+        v.capture && be_piece(v.capture) && !be_turn(v.capture)
+      )
+    })
+  })
+}
 
 export function backrank(drops: Drops) {
   return drops.filter(_ =>
@@ -429,10 +520,6 @@ export function qxr(drops: Drops) {
         be_rook(v.capture)
       )
   })
-}
-
-export function pickups(drops: Drops) {
-  return drops.filter(_ => be_turn(_) && !be_king(_) && !be_pawn(_))
 }
 
 const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
