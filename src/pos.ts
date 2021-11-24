@@ -459,12 +459,25 @@ export function qonk(drops: Drops) {
     be_turn(_) && be_queen(_))
   .flatMap(pickup => {
     return pickup_drop(pickup, drops)
+      .filter(v => be_direct(v.blocks))
       .filter(v => {
-      }) 
+        let _drops = drops_apply_pickupdrop(v, drops)
+        return _drops.filter(_ =>
+          be_king(_) && be_turn(_))
+          .flatMap(kpickup =>
+            pickup_drop(kpickup, _drops)
+            .filter(vk =>
+              vk.capture && be_orig(vk.capture, v.drop)
+            )
+          ).length > 0
+      })
+    .filter(v =>
+      c_kingflee(v, drops).length === 0
+    )
   })
 }
 
-export function xr(drops: Drops) {
+export function xp(drops: Drops) {
   return drops.filter(_ =>
     be_turn(_))
   .flatMap(pickup => {
@@ -473,7 +486,7 @@ export function xr(drops: Drops) {
         be_direct(v.blocks) &&
         v.capture && be_opposite(v.pickup,
           v.capture) &&
-        be_rook(v.capture)
+        be_piece(v.capture)
       )
   })
 }
@@ -489,7 +502,6 @@ export function intent_capture(pd: PickupDrop, drops: Drops) {
   let pickup = drops_orig(pd.drop.orig, _drops)!
   return pickup_drop(pickup, _drops)
     .filter(v =>
-      !be_turn(v.pickup) &&
       v.capture && be_opposite(v.capture, v.pickup)
     )
 }

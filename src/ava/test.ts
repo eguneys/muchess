@@ -233,13 +233,18 @@ function solve2(puzzle20: string, filterid?: string) {
       let _res: Array<pos.PickupDrop> = []
 
       if (_res.length === 0) {
+        tactic = 'qonk'
+        _res = pos.qonk(_drops)
+      }
+
+      if (_res.length === 0) {
         tactic = 'backrank'
         _res = pos.backrank(_drops)
       }
 
       if (_res.length === 0) {
-        tactic = 'xr'
-        _res = pos.xr(_drops)
+        tactic = 'xp'
+        _res = pos.xp(_drops)
       }
 
 
@@ -301,7 +306,7 @@ function solve2(puzzle20: string, filterid?: string) {
 
   console.log('Crash ', crash.length, crash.slice(0, 4))
   console.log('Extra ', extra.length/2, extra.slice(0, 2))
-  console.log('None ', none.length, none.slice(0, 4))
+  console.log('None ', none.length, none.slice(0, 14))
   console.log('Miss ', miss.length/2, miss.slice(0, 4))
   console.log('Correct ', correct.length, tactics)
 }
