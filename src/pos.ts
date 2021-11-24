@@ -198,11 +198,11 @@ function rays(vmove: VMove): Rays {
 export const vrays: SlidingMap<Rays> = objMap(vmoves, (key, vmove) => rays(vmove))
 // }}}
 
-export function drops_pickup(h: HasOrig, drops: Drops): Drops {
+export function _drops_pickup(h: HasOrig, drops: Drops): Drops {
   return drops.filter(_ => !equal(_.orig, h.orig))
 }
 
-export function drops_drop(drop: Drop, drops: Drops): Drops {
+export function _drops_drop(drop: Drop, drops: Drops): Drops {
   return [drop, ...drops]
 }
 
@@ -210,17 +210,17 @@ export function drops_orig(orig: Pos, drops: Drops): Drop | undefined {
   return drops.filter(_ => equal(_.orig, orig))[0]
 }
 
-export function drops_turn(drops: Drops): Drops {
+export function _drops_turn(drops: Drops): Drops {
   return drops.map(_ => ({..._, turn: !_.turn }))
 }
 
 export function drops_apply_pickupdrop(h: PickupDropCaptureBase, drops: Drops) {
 
   let { pickup, drop, capture } = h
-  let drops2 = drops_pickup(pickup, drops),
-    drops3 = capture ? drops_pickup(capture, drops2) : drops2,
-    drops4 = drops_drop(drop, drops3),
-    drops5 = drops_turn(drops4)
+  let drops2 = _drops_pickup(pickup, drops),
+    drops3 = capture ? _drops_pickup(capture, drops2) : drops2,
+    drops4 = _drops_drop(drop, drops3),
+    drops5 = _drops_turn(drops4)
 
     return drops5
 }
@@ -441,28 +441,35 @@ export function pin(drops: Drops) {
   return drops.filter(_ =>
     be_turn(_) && be_bishop(_)
   ).flatMap(pickup => {
-    let _drops = drops_pickup(pickup, drops)
-    return pickup_drop(pickup, _drops)
+    return pickup_drop(pickup, drops)
       .filter(v =>
-        intent_capture(v, _drops)
+        intent_capture(v, drops)
         .filter(i =>
           i.blocks.length === 1 &&
-          be_queen(drops_orig(i.blocks[0].orig, _drops)!) &&
+          be_queen(drops_orig(i.blocks[0].orig, drops)!) &&
           i.capture && be_opposite(i.pickup, i.capture) && be_king(i.capture)
         ).length === 1
       )
   })
 }
 
-export function qxr(drops: Drops) {
+
+export function qonk(drops: Drops) {
   return drops.filter(_ =>
     be_turn(_) && be_queen(_))
   .flatMap(pickup => {
-    let _drops = drops_pickup(pickup, drops)
+    return pickup_drop(pickup, drops)
+      .filter(v => {
+      }) 
+  })
+}
 
-    return pickup_drop(pickup, _drops)
+export function xr(drops: Drops) {
+  return drops.filter(_ =>
+    be_turn(_))
+  .flatMap(pickup => {
+    return pickup_drop(pickup, drops)
       .filter(v =>
-        be_turn(v.pickup) &&
         be_direct(v.blocks) &&
         v.capture && be_opposite(v.pickup,
           v.capture) &&

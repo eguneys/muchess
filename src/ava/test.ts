@@ -187,8 +187,10 @@ let puzzles = [
   puzzle80,
   puzzle100,
 ].map(_ => _.trim()).join('\n')
+
+
 test.only('puzzles', t => {
-  solve2(puzzles, '00ohT')
+  solve2(puzzles)
   t.pass()
 })
 
@@ -231,6 +233,17 @@ function solve2(puzzle20: string, filterid?: string) {
       let _res: Array<pos.PickupDrop> = []
 
       if (_res.length === 0) {
+        tactic = 'backrank'
+        _res = pos.backrank(_drops)
+      }
+
+      if (_res.length === 0) {
+        tactic = 'xr'
+        _res = pos.xr(_drops)
+      }
+
+
+      if (_res.length === 0) {
         tactic = 'intentx'
         _res = pos.intent_capture(pd, drops)
           .flatMap(intent => {
@@ -253,11 +266,6 @@ function solve2(puzzle20: string, filterid?: string) {
           })
       }
 
-      if (_res.length === 0) {
-        tactic = 'backrank'
-        _res = pos.backrank(_drops)
-      }
-      
       if (_res.length === 0) {
         tactic = 'pin'
         _res = pos.pin(_drops)
