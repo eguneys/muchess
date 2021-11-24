@@ -1,6 +1,31 @@
 import test from 'ava';
 
 import * as pos from '../pos'
+
+const puzzle100 = `
+01lB9,1qkr3r/pp1b2p1/5p2/3Pn2p/2Pp1B2/P2B2P1/1Q3P1P/1R3RK1 w - - 2 21,b2d4 e5f3 g1g2 f3d4 f4b8 c8b8,960,75,100,334,advantage fork long middlegame,https://lichess.org/DAhE0yC8#41
+004iZ,r2r2k1/2q1bpp1/3p1n1p/1ppN4/1P1BP3/P5Q1/4RPPP/R5K1 b - - 1 20,f6d5 g3g7,963,85,97,467,kingsideAttack mate mateIn1 middlegame oneMove,https://lichess.org/dQ85JUe1/black#40
+00OOp,5rk1/1bR3q1/pQ6/8/6r1/4R2P/P7/6K1 w - - 0 28,h3g4 g7g4 e3g3 g4g3,964,82,92,36,endgame mate mateIn2 short,https://lichess.org/N1WcEYJH#55
+01194,5qk1/p1pb2p1/5p2/r2N1P1p/2Pp3Q/2n5/P5PP/R4RK1 w - - 0 25,h4d4 c3e2 g1h1 e2d4,965,76,100,767,crushing fork middlegame short,https://lichess.org/KqOvYIB5#49
+00NOI,3r4/2k2p1p/pp2pp2/2p5/3nN3/6P1/PPP2PRP/2K5 w - - 2 23,e4f6 d4e2 c1b1 d8d1,966,89,60,32,backRankMate endgame mate mateIn2 short,https://lichess.org/Z7mmtXNG#45
+01Ie5,8/3R3p/6pk/5p2/5PP1/1r5P/r2B1K2/8 b - - 0 46,b3b2 g4g5 h6h5 d7h7,967,76,98,614,deflection endgame mate mateIn2 short,https://lichess.org/MSON3n5v/black#92
+01srl,2r1r3/pQ5p/5kp1/1P6/P7/8/5PPP/4R1K1 w - - 1 34,e1e8 c8c1 e8e1 c1e1,967,78,100,1120,backRankMate endgame mate mateIn2 queenRookEndgame short,https://lichess.org/T6cxLj6c#67
+00Aae,1R6/1P6/4pkp1/5p2/3P3p/3KP3/8/1r6 b - - 0 43,h4h3 b8f8 f6e7 b7b8q b1b8 f8b8,968,75,87,320,advancedPawn clearance crushing endgame long promotion rookEndgame,https://lichess.org/mLIjph1r/black#86
+00tdc,r1bqk1nr/ppppbppp/2n5/8/2P5/4Q3/PP2PPPP/RNB1KBNR w KQkq - 3 5,e3c3 e7b4 c1d2 b4c3,968,80,57,100,crushing opening pin short,https://lichess.org/u6d3aV84#9
+00nFD,r4rk1/p1q2pb1/2p1b1pp/3np3/2B1N2P/4BP2/PPP3P1/2KRQ2R w - - 0 16,g2g4 d5e3 c4e6 e3d1,971,76,98,793,advantage master middlegame short,https://lichess.org/FeP6qhNK#31
+002E4,8/8/kpq5/p4pQp/P7/7P/3r2P1/4R2K b - - 10 48,c6a4 g5d2,974,92,18,38,crushing endgame hangingPiece oneMove,https://lichess.org/JwMca3Nw/black#96
+00puq,4r3/1k3pbp/1pp1q3/p3Npp1/P2P2n1/2PQ4/1P3PPP/2N1R1K1 w - - 6 33,e5f3 e6e1 f3e1 e8e1 d3f1 e1f1,975,100,93,210,crushing fork long middlegame,https://lichess.org/mp138SCG#65
+01Lyl,3r1rk1/pp4b1/2p2p2/5P1p/6n1/2N2B2/PPP1Q1Pq/3RR1K1 w - - 2 26,g1f1 h2h1,975,80,97,502,mate mateIn1 middlegame oneMove,https://lichess.org/sZYNjKzl#51
+00Fyu,r7/p1qbppbk/2p3p1/2pp4/4PP2/1P1P1N2/P1P3PP/3Q1RK1 b - - 2 16,d7g4 f3g5 h7g8 d1g4,977,245,-100,3,advantage discoveredAttack middlegame short,https://lichess.org/kjeZtnnv/black#32
+00Keu,R7/1p3kp1/2pK3p/3p1PP1/1r1B2nP/8/1P6/8 b - - 2 39,b4d4 g5g6 f7f6 a8f8,977,76,100,132,endgame mate mateIn2 short,https://lichess.org/hCWa2OUn/black#78
+00YCP,2k3nr/1ppr2pp/p3pp2/2b5/5P2/1N2nN2/PP4PP/1RB1R1K1 b - - 3 15,c5a7 c1e3 a7e3 e1e3,977,77,88,319,advantage middlegame short,https://lichess.org/UMVnTZ8x/black#30
+00cud,8/5p2/6p1/1p1N1k2/1PbK4/2P3P1/8/8 b - - 0 48,c4f1 d5e3 f5e6 e3f1,978,85,95,490,crushing endgame fork master short,https://lichess.org/XdT6vR6T/black#96
+00jXD,3r2k1/p4pp1/1bN2q1p/8/Q3p3/P3P2P/5PP1/2R3K1 b - - 5 31,d8c8 c6e7 f6e7 c1c8,978,79,92,269,crushing discoveredAttack endgame short,https://lichess.org/JvQRcqwH/black#62
+007XE,2kr3r/p1p1bpp1/2p2n1p/8/8/1P6/P1P1RPPP/RNB3K1 w - - 1 16,e2e7 d8d1 e7e1 d1e1,979,144,69,14,backRankMate fork mate mateIn2 middlegame short,https://lichess.org/f4f7UwiT#31
+00baZ,r7/8/p1k5/1p1p1pn1/3R3p/2P1P2P/5P2/R5K1 w - - 0 31,d4h4 g5f3 g1g2 f3h4,979,96,95,209,crushing endgame fork short,https://lichess.org/tNXaI1nN#61
+`
+
+
 const puzzle80 = `
 01J5O,r4r1k/1pp1NppR/3p4/p3n3/4P3/1PPP2P1/1P1K2P1/3R4 b - - 0 22,h8h7 d1h1,921,114,100,26,anastasiaMate endgame mate mateIn1 oneMove,https://lichess.org/2DUSUcNf/black#44
 01gQ1,2kr1b1r/pbp5/1pn1q1pp/3p1p2/3P4/P1P1BQ1B/1P3P1P/R3K1R1 b Q - 1 18,g6g5 h3f5 e6f5 f3f5,925,82,88,85,advantage middlegame pin short,https://lichess.org/4gkLoCF2/black#36
@@ -123,31 +148,49 @@ test('intent flee choose capture', t => {
 })
 
 test('puzzle 0', t => {
-  solve(puzzle0)
+  solve2(puzzle0)
   t.pass()
 })
 
 
 test('puzzle 20', t => {
-  solve(puzzle20)
+  solve2(puzzle20)
   t.pass()
 })  
 
 test('puzzle 40', t => {
-  solve(puzzle40)
+  solve2(puzzle40)
   t.pass()
 })  
 
 test('puzzle 60', t => {
-  solve(puzzle60)
+  solve2(puzzle60)
   t.pass()
 })  
 
-
-test.only('puzzle 80', t => {
+test('puzzle 80', t => {
   solve2(puzzle80)
   t.pass()
 })  
+
+test('puzzle 100', t => {
+  solve2(puzzle100)
+  t.pass()
+})  
+
+
+let puzzles = [
+  puzzle0,
+  puzzle20,
+  puzzle40,
+  puzzle60,
+  puzzle80,
+  puzzle100,
+].map(_ => _.trim()).join('\n')
+test.only('puzzles', t => {
+  solve2(puzzles, '00ohT')
+  t.pass()
+})
 
 function solve2(puzzle20: string, filterid?: string) {
   let pzs = puzzle20.trim().split('\n').map(_ => _.split(',').slice(0, 3))
@@ -158,6 +201,8 @@ function solve2(puzzle20: string, filterid?: string) {
     none: any = [],
     miss: any = []
 
+  let tactics: any = {}
+
   pzs.filter(pz => {
     let [id, fen, _moves] = pz
 
@@ -167,7 +212,8 @@ function solve2(puzzle20: string, filterid?: string) {
 
     let question_uci = moves.pop()
     let answer_uci = moves.pop()!
-      let info = [id, fen, _moves].join(',')
+    let info = [id, fen, _moves].join(',')
+    let tactic: string = ''
 
     if (filterid && id !== filterid)return false
 
@@ -185,6 +231,7 @@ function solve2(puzzle20: string, filterid?: string) {
       let _res: Array<pos.PickupDrop> = []
 
       if (_res.length === 0) {
+        tactic = 'intentx'
         _res = pos.intent_capture(pd, drops)
           .flatMap(intent => {
             let pickup = pos.intent_flee(intent, _drops)
@@ -206,23 +253,31 @@ function solve2(puzzle20: string, filterid?: string) {
           })
       }
 
+      if (_res.length === 0) {
+        tactic = 'backrank'
+        _res = pos.backrank(_drops)
+      }
+      
+      if (_res.length === 0) {
+        tactic = 'pin'
+        _res = pos.pin(_drops)
+      }
+
 
       if (_res.length === 0) {
+        tactic = 'fork'
         _res = pos.fork(_drops)
           .filter(_ =>
             pos.c_capture(_, _drops).length === 0
           )
       }
 
-      if (_res.length === 0) {
-        _res = pos.backrank(_drops)
-      }
-
-
       let res = _res.map(pos.pickupdrop_uci)
 
-
       if (res.length === 1 && res[0] === answer_uci) {
+        tactics[tactic] |= 0 
+        tactics[tactic]++
+
         correct.push(info)
       } else if (res.length > 1 && res.includes(answer_uci)) {
         extra.push(info, res)
@@ -240,80 +295,5 @@ function solve2(puzzle20: string, filterid?: string) {
   console.log('Extra ', extra.length/2, extra.slice(0, 2))
   console.log('None ', none.length, none.slice(0, 4))
   console.log('Miss ', miss.length/2, miss.slice(0, 4))
-  console.log('Correct ', correct.length)
+  console.log('Correct ', correct.length, tactics)
 }
-
-
-function solve(puzzle20: string) {
-  let pzs = puzzle20.trim().split('\n').map(_ => _.split(',').slice(1, 3))
-
-  let correct: any = [],
-    extra: any = [],
-    none: any = [],
-    miss: any = []
-
-  pzs.filter(pz => {
-    let [fen, _moves] = pz
-
-    let moves = _moves.split(' ').reverse()
-    let drops = pos.fen_drops(fen)
-
-    let question_uci = moves.pop()
-    if (question_uci) {
-      let _drops = pos.drops_apply_uci(question_uci, drops)!
-
-        if (!_drops) {
-          return `fail apply uci ${question_uci}`
-        }
-
-
-      let answer_uci = moves.pop()!
-        let info = [fen, _moves].join(',')
-
-      if (answer_uci !== 'b7c7')return false
-      let _res = pos.backrank(_drops)
-        .filter(_ => 
-          pos.c_capture(_, _drops)
-          .filter(_capture => {
-            let ___drops =
-              pos.drops_apply_pickupdrop(_capture,
-                pos.drops_apply_pickupdrop(_, _drops))
-
-            return pos.backrank(___drops)
-              .length > 0
-
-          })
-          .length === 0)
-
-      
-      if (_res.length === 0) {
-        _res = pos.fork(_drops)
-        .filter(_ =>
-          pos.c_capture(_, _drops).length === 0)
-      }
-      if (_res.length === 0) {
-        _res = pos.qxr(_drops)
-      }
-      let res = _res.map(pos.pickupdrop_uci)
-
-
-      if (res.length === 1 && res[0] === answer_uci) {
-        correct.push(info)
-      } else if (res.length > 1 && res.includes(answer_uci)) {
-        extra.push(info, res)
-      } else if (res.length === 0) {
-        none.push(info)
-      }else {
-        miss.push(info, res)
-      }
-    }
-
-    return true
-  })
-
-  console.log('Correct ', correct.length)
-  console.log('Extra ', extra.length/2, extra.slice(0, 2))
-  console.log('None ', none.length, none.slice(0, 4))
-  console.log('Miss ', miss.length/2, miss.slice(0, 4))
-}
-

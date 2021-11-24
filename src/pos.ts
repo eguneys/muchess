@@ -406,11 +406,12 @@ export function fork(drops: Drops, _pickup?: Pickup) {
     return pickup_drop(pickup, drops)
     .filter(v => 
       be_direct(v.blocks) && 
+      (!v.capture || be_opposite(v.capture, v.pickup)) &&
       intent_capture(v, drops).filter(_ =>
-        _.capture && be_king(_.capture)
+        be_direct(_.blocks) && _.capture && be_king(_.capture)
       ).length > 0 &&
       intent_capture(v, drops).filter(_ =>
-        _.capture && be_piece(_.capture)
+        be_direct(_.blocks) && _.capture && be_piece(_.capture)
       ).length > 0
     )
   })
@@ -428,7 +429,7 @@ export function backrank(drops: Drops) {
       be_backrank(v.drop)
     ).filter(v => 
       intent_capture(v, drops).filter(_ => 
-        _.capture && be_king(_.capture)
+        be_direct(_.blocks) && _.capture && be_king(_.capture)
       ).length > 0
     ).filter(v =>
       c_kingflee(v, drops).length === 0
@@ -436,6 +437,22 @@ export function backrank(drops: Drops) {
   })
 }
 
+export function pin(drops: Drops) {
+  return drops.filter(_ =>
+    be_turn(_) && be_bishop(_)
+  ).flatMap(pickup => {
+    let _drops = drops_pickup(pickup, drops)
+    return pickup_drop(pickup, _drops)
+      .filter(v =>
+        intent_capture(v, _drops)
+        .filter(i =>
+          i.blocks.length === 1 &&
+          be_queen(drops_orig(i.blocks[0].orig, _drops)!) &&
+          i.capture && be_opposite(i.pickup, i.capture) && be_king(i.capture)
+        ).length === 1
+      )
+  })
+}
 
 export function qxr(drops: Drops) {
   return drops.filter(_ =>
@@ -466,7 +483,6 @@ export function intent_capture(pd: PickupDrop, drops: Drops) {
   return pickup_drop(pickup, _drops)
     .filter(v =>
       !be_turn(v.pickup) &&
-      be_direct(v.blocks) &&
       v.capture && be_opposite(v.capture, v.pickup)
     )
 }
