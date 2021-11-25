@@ -21,9 +21,9 @@ test.only('all puzzles', t => {
     let puzzles = data.trim()
       .split('\n')
       .map(_ => _.split(',').slice(0, 3))
-      .slice(100, 200)
+      .slice(400, 500)
 
-    solve2(puzzles, '001om')
+    solve2(puzzles)
 
     t.pass()
   })
@@ -163,7 +163,7 @@ function solve2(pzs: Array<Array<string>>, filterid?: string) {
 
   console.log('Crash ', crash.length, crash.slice(0, 4))
   console.log('Extra ', extra.length/2, extra.slice(0, 2))
-  console.log('None ', none.length, none.slice(0, 7))
-  console.log('Miss ', miss.length/2, miss.slice(0, 4))
+  console.log('None ', none.length, none.slice(0, 14))
+  console.log('Miss ', miss.length/2, miss.slice(0, 20))
   console.log('Correct ', correct.length, tactics)
 }

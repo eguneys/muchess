@@ -1,3 +1,8 @@
+
+
+
+
+
 - [ ] Tension counter
 
 - [ ] Criticize spot
