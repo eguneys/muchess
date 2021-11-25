@@ -492,6 +492,50 @@ export function xp(drops: Drops) {
 }
 
 
+export function discover(drops: Drops) {
+  return drops.filter(_ =>
+    be_turn(_)
+  ).flatMap(pickup =>
+    pickup_drop(pickup, drops)
+    .filter(v =>
+      v.blocks.length === 1 &&
+      be_turn(drops_orig(v.blocks[0].orig, drops)!) &&
+      v.capture && be_opposite(v.capture, v.pickup)
+    ).flatMap(v => {
+      let pickup = drops_orig(v.blocks[0].orig, drops)!
+
+      return pickup_drop(pickup, drops)
+    })
+  )
+}
+
+
+export function nmate(drops: Drops) {
+  return drops.filter(_ =>
+    be_turn(_) && be_knight(_)
+  ).flatMap(pickup =>
+    pickup_drop(pickup, drops)
+    .filter(v =>
+      c_kingflee(v, drops).length === 0)
+  )
+}
+
+export function bmate(drops: Drops) {
+  return drops.filter(_ =>
+    be_turn(_) && be_bishop(_)
+  ).flatMap(pickup =>
+    pickup_drop(pickup, drops)
+    .filter(v =>
+      be_direct(v.blocks) &&  
+      c_kingflee(v, drops).length === 0 &&
+      intent_capture(v, drops).filter(_ =>
+        _.capture && be_king(_.capture)
+      ).length === 1
+    )
+  )
+}
+
+
 export function intent_flee(xpd: PickupDrop, drops: Drops) {
   return xpd.capture && drops_orig(xpd.capture.orig, drops)
 }
