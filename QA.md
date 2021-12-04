@@ -1,30 +1,172 @@
+### Formal 2
+
+
+`
+
+Q b, b Q
+@N, N k, N b
+B N, q N, q r, Q r
+  qN Qr
+
+
+@Nxq, N Q, r Q
+rQ, Nr
+
+
+@B, B r b
+'r, Bb
+!r, Br
+
+
+
+`
+
+
+
+
+## Formal
+
+`
+R Drop Attack b
+  Defend none
+  Pickup b R Attack b2
+
+R Drop Attack kq
+
+
+N Drop Attack a a2
+
+
+B Drop Capture a
+  d Drop a Capture B
+    D Drop a Capture d
+
+
+B Drop Capture a
+  d Drop a Capture B
+  Pickup d Deflect c
+
+
+.x.
+.k.
+B Q x, Q x, d x
+A Capture d
+
+
+f.f
+.k.
+.x.
+Q Drop x
+
+.yx
+ek.
+R x y Q Drop x
+  k flee e
+  Q Drop y
+  Mate
+
+
+h.f
+ek.
+N h f, Q f h Q Drop f
+  k flee e
+  Q Drop h
+  Mate
+
+
+B r
+  r no flee
+
+R r, R R2, Q R2
+  Drop R2 _ Check
+  k flee
+  R Capture r
+
+Q m
+  Drop R, R q m
+
+nm 
+kef
+
+R m n, R2 R m n
+R Drop n
+  king flee e
+    R2 Drop m
+    Mate 
+
+
+Q b, q b, q f, N f, Nf k, Nf b
+  Capture Q b
+  Capture q b
+  Drop N f +
+  king flee
+  Drop Nf b
+
+
+B R r,
+  Drop R, R q b
+  Drop r, r Q
+  R Capture q
+  r Capture Q
+  R Capture b
+
+
+
+
+uuuu
+fkmu
+fnfu
+
+B n m
+ Q Drop f
+ k Capture f
+ R Drop a, R f Check
+ k flee m,
+ R Drop m
+ Mate
+
+
+@R k, R q, F R
+r R, r r2, Q r2
+  rR, Qr2 Qr2 k
+  k flee, FR
+
+
+uuuu
+ fxu
+n.ku
+
+@P, P n, P k, Q n, Q x
+
+
+`
+
+
+## Qualities
+
 - [ ] Q on f7
 - [ ] Q B, Q R, battery
 
+## Later
+- [ ] 01eK0 Bishops raking adjacent diagonals forcing king to step up into a bishop fork one flee square occupied by friend
+- [ ] 01MKa Rook attacks queen, which is trapped
 
-- [ ] 01GQI Bishop goes to protected square to fork a king and a hanging knight
 - [ ] 01Qwv Queen eyes rook defending backrank defended by king, piece gives a check to deflect the king from defense of the rook
+
+## Ok
 
 - [ ] 00nji Rook forks two pieces by xray
 - [ ] 006yP Rook forks king and a piece by xray
 - [ ] 01iaw Bishop forks king and a piece by xray
 - [ ] 00WT8 Rook forks king and queen
-
-- [ ] 00yLn Knight forks two hanging pieces
+- [ ] 00yLn Knight forks two pieces
 - [ ] 010nK Knight forks king and rook
-- [ ] 
+- [ ] 01GQI Bishop forks king and knight
 
 - [ ] 00z3y Bishop takes a protected piece, where recapture will be recaptured
-
 - [ ] 01J3E Protected piece can be captured where recapture will deflect an important defense
 
 - [ ] 01bhr Queen check is blocked by queen, queen tension defended by king deflected by rook check
-
-- [ ] 01eK0 Bishops raking adjacent diagonals forcing king to step up into a bishop fork one flee square occupied by friend
-
-
-- [ ] 01MKa Rook attacks queen, which is trapped
-
 - [ ] 01NfS Queen bishop battery eyes the king front on the backrank, defended once is captured which recapture will lead to mate
 
 ## Mates

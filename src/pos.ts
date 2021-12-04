@@ -64,6 +64,9 @@ type PickupAndDropBase = HasOrig & HasColor & HasRole & HasTurn & {}
 type Drop = PickupAndDropBase & {} 
 type Pickup = PickupAndDropBase & {} 
 
+
+
+
 export type PickupDropCaptureBase = HasPickup & HasDrop & {
   capture?: Pickup
 }
@@ -74,129 +77,8 @@ export type PickupDrop = HasPickup & HasDrop & {
   nonblocks: Array<Pos>
 }
 
-
 export type Drops = Array<Drop>
 
-// {{{ rays
-const vrook: Array<VPos> = [
-  [-1, 0],
-  [1, 0],
-  [0, -1],
-  [0, 1]
-]
-
-const vbishop: Array<VPos> = [
-  [-1, -1],
-  [-1, 1],
-  [1, -1],
-  [1, 1]
-]
-
-const vknight: Array<VPos> = [
-  [-2, -1],
-  [-2, 1],
-  [2, -1],
-  [2, 1],
-  [-1, -2],
-  [-1, 2],
-  [1, -2],
-  [1, 2]
-]
-
-
-const vqueen = [...vrook, ...vbishop]
-const vking = vqueen
-
-const proj7: Array<Proj> = [1, 2, 3, 4, 5, 6, 7]
-const proj1: Array<Proj> = [1]
-const proj2: Array<Proj> = [1, 2]
-
-
-const vmoves: SlidingMap<VMove> = {
-  r: [vrook, proj7],
-  q: [vqueen, proj7],
-  b: [vbishop, proj7],
-  n: [vknight, proj1],
-  k: [vking, proj1]
-}
-
-const eposs: Array<Epos> = [1, 2, 3, 4, 5, 6, 7, 8]
-
-const poss: Array<Pos> = eposs.flatMap(f => eposs.map<Pos>(r => [f, r]))
-
-const roles: Array<Role> = ['p', 'q', 'b', 'n', 'r', 'k']
-
-function opposite(w: Color = 'w') {
-  return w === 'w' ? 'b' : 'w'
-}
-function worb(pre: boolean, w: Color = 'w'): Color {
-  return pre ? w : opposite(w)
-}
-
-function is_role(_: string): _ is Role {
-  return roles.includes(_ as Role)
-}
-
-function is_epos(_: number): _ is Epos {
-  return 1 <= _ && _ <= 8
-}
-
-function is_proj(_: number): _ is Proj {
-  return 1 <= _ && _ <= 7
-}
-
-function is_sliding(_: Role): _ is Sliding {
-  return _ !== 'p'
-}
-
-export function equal(pos: Pos, other: Pos): boolean {
-  return pos[0] === other[0] && pos[1] === other[1]
-}
-
-function apply_vpos(pos: Pos, vpos: VPos): Pos | undefined {
-  let f = pos[0] + vpos[0],
-    r = pos[1] + vpos[1]
-
-  if (is_epos(f) && is_epos(r)) {
-    return [f, r]
-  }
-}
-
-export function cast_vpos(pos: Pos, vpos: VPos, proj: number): Array<Pos> {
-  let next = apply_vpos(pos, vpos)
-  let next_proj = proj - 1
-  
-  if (next && is_proj(proj)) {
-    return [pos, ...cast_vpos(next, vpos, next_proj)]
-  } else {
-    return [pos]
-  }
-
-}
-
-function rays(vmove: VMove): Rays {
-  let [vposs, projs] = vmove
-
-  return projs.flatMap(proj =>
-    vposs.flatMap(vpos => 
-      poss.flatMap(pos => {
-        let rays = cast_vpos(pos, vpos, proj) 
-        if (rays.length <= proj) {
-          return []
-        }
-        let [orig, ...rest] = rays
-        let [target, ...rbetween] = rest.reverse()
-
-        return {
-          orig,
-          target,
-          between: rbetween.reverse()
-        } 
-      })))
-}
-
-export const vrays: SlidingMap<Rays> = objMap(vmoves, (key, vmove) => rays(vmove))
-// }}}
 
 export function _drops_pickup(h: HasOrig, drops: Drops): Drops {
   return drops.filter(_ => !equal(_.orig, h.orig))
@@ -364,9 +246,24 @@ function be_opposite(h: HasColor, h2: HasColor) {
 }
 
 
+function be_same(h: HasColor, h2: HasColor) {
+  return h.color === h2.color
+}
+
+
+
 function be_block(h: Array<Pos>, h2: HasOrig) {
   return h.some(_ => equal(_, h2.orig))
 }
+
+
+export function threat_capture(drops: Drops) {
+
+
+
+}
+
+
 
 export function c_kingflee(pd: PickupDrop, drops: Drops) {
   let _drops = drops_apply_pickupdrop(pd, drops)
@@ -549,6 +446,128 @@ export function intent_capture(pd: PickupDrop, drops: Drops) {
       v.capture && be_opposite(v.capture, v.pickup)
     )
 }
+
+// {{{ rays
+const vrook: Array<VPos> = [
+  [-1, 0],
+  [1, 0],
+  [0, -1],
+  [0, 1]
+]
+
+const vbishop: Array<VPos> = [
+  [-1, -1],
+  [-1, 1],
+  [1, -1],
+  [1, 1]
+]
+
+const vknight: Array<VPos> = [
+  [-2, -1],
+  [-2, 1],
+  [2, -1],
+  [2, 1],
+  [-1, -2],
+  [-1, 2],
+  [1, -2],
+  [1, 2]
+]
+
+
+const vqueen = [...vrook, ...vbishop]
+const vking = vqueen
+
+const proj7: Array<Proj> = [1, 2, 3, 4, 5, 6, 7]
+const proj1: Array<Proj> = [1]
+const proj2: Array<Proj> = [1, 2]
+
+
+const vmoves: SlidingMap<VMove> = {
+  r: [vrook, proj7],
+  q: [vqueen, proj7],
+  b: [vbishop, proj7],
+  n: [vknight, proj1],
+  k: [vking, proj1]
+}
+
+const eposs: Array<Epos> = [1, 2, 3, 4, 5, 6, 7, 8]
+
+const poss: Array<Pos> = eposs.flatMap(f => eposs.map<Pos>(r => [f, r]))
+
+const roles: Array<Role> = ['p', 'q', 'b', 'n', 'r', 'k']
+
+function opposite(w: Color = 'w') {
+  return w === 'w' ? 'b' : 'w'
+}
+function worb(pre: boolean, w: Color = 'w'): Color {
+  return pre ? w : opposite(w)
+}
+
+function is_role(_: string): _ is Role {
+  return roles.includes(_ as Role)
+}
+
+function is_epos(_: number): _ is Epos {
+  return 1 <= _ && _ <= 8
+}
+
+function is_proj(_: number): _ is Proj {
+  return 1 <= _ && _ <= 7
+}
+
+function is_sliding(_: Role): _ is Sliding {
+  return _ !== 'p'
+}
+
+export function equal(pos: Pos, other: Pos): boolean {
+  return pos[0] === other[0] && pos[1] === other[1]
+}
+
+function apply_vpos(pos: Pos, vpos: VPos): Pos | undefined {
+  let f = pos[0] + vpos[0],
+    r = pos[1] + vpos[1]
+
+  if (is_epos(f) && is_epos(r)) {
+    return [f, r]
+  }
+}
+
+export function cast_vpos(pos: Pos, vpos: VPos, proj: number): Array<Pos> {
+  let next = apply_vpos(pos, vpos)
+  let next_proj = proj - 1
+  
+  if (next && is_proj(proj)) {
+    return [pos, ...cast_vpos(next, vpos, next_proj)]
+  } else {
+    return [pos]
+  }
+
+}
+
+function rays(vmove: VMove): Rays {
+  let [vposs, projs] = vmove
+
+  return projs.flatMap(proj =>
+    vposs.flatMap(vpos => 
+      poss.flatMap(pos => {
+        let rays = cast_vpos(pos, vpos, proj) 
+        if (rays.length <= proj) {
+          return []
+        }
+        let [orig, ...rest] = rays
+        let [target, ...rbetween] = rest.reverse()
+
+        return {
+          orig,
+          target,
+          between: rbetween.reverse()
+        } 
+      })))
+}
+
+export const vrays: SlidingMap<Rays> = objMap(vmoves, (key, vmove) => rays(vmove))
+// }}}
+
 
 
 // {{{ fen uci

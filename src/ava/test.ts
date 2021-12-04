@@ -23,7 +23,7 @@ test.only('all puzzles', t => {
       .map(_ => _.split(',').slice(0, 3))
       .slice(400, 500)
 
-    solve2(puzzles)
+    solve2(puzzles, '00Lo9')
 
     t.pass()
   })
@@ -66,6 +66,11 @@ function solve2(pzs: Array<Array<string>>, filterid?: string) {
       let _drops = pos.drops_apply_pickupdrop(pd, drops)
 
       let _res: Array<pos.PickupDrop> = []
+
+      if (_res.length === 0) {
+        tactic = 'hangingfork'
+        _res = pos.threat_capture(_drops)
+      } 
 
       if (_res.length === 0) {
         tactic = 'qonk'
@@ -153,8 +158,8 @@ function solve2(pzs: Array<Array<string>>, filterid?: string) {
         extra.push(info, res)
       } else if (res.length === 0) {
         none.push(info)
-      }else {
-        miss.push(info, res)
+      } else {
+        miss.push([info, res, tactic])
       }
 
       return true
